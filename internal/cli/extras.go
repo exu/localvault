@@ -60,7 +60,7 @@ func (a *App) deleteCmd() *cobra.Command {
 	}
 }
 
-// runCmd runs a shell command with $env[NAME] references exposed as child env vars, keeping values out of argv.
+// runCmd runs a shell command with $env[NAME] references exposed as child env vars, keeping values out of argv and scrubbing stored values from its output.
 func (a *App) runCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "run 'command with $env[KEY]'",
@@ -83,9 +83,20 @@ func (a *App) runCmd() *cobra.Command {
 			c := exec.Command("sh", "-c", script)
 			c.Env = env
 			c.Stdin = cmd.InOrStdin()
-			c.Stdout = cmd.OutOrStdout()
-			c.Stderr = cmd.ErrOrStderr()
-			return c.Run()
+			stdout, skipped := newRedactor(cmd.OutOrStdout(), secrets)
+			stderr, _ := newRedactor(cmd.ErrOrStderr(), secrets)
+			c.Stdout, c.Stderr = stdout, stderr
+			for _, n := range skipped {
+				fmt.Fprintf(cmd.ErrOrStderr(), "localvault: %s is too short to redact from output\n", n)
+			}
+			runErr := c.Run()
+			if err := stdout.Close(); err != nil {
+				return err
+			}
+			if err := stderr.Close(); err != nil {
+				return err
+			}
+			return runErr
 		},
 	}
 }

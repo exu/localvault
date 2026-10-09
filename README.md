@@ -44,6 +44,8 @@ Use a secret in a command without it appearing in `ps`:
 
 Each `$env[NAME]` becomes an environment variable of the child shell, so use it like a normal `$NAME` (quote it yourself).
 
+`run` also scrubs every stored value from the command's stdout and stderr, replacing it with `[REDACTED:NAME]`, so output returned to an AI agent never contains secret values. Limits: only literal values are matched (not base64 or other transforms), and values shorter than 4 characters are not redacted (a warning names them). `get` prints the raw value, so agents should use `run`, not `get`.
+
 Read into a variable in a script:
 
     token=$(localvault get API_TOKEN) || exit 1
