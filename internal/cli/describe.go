@@ -42,6 +42,7 @@ func parentName() string {
 	if err != nil || name == "" {
 		return "a process"
 	}
+	name = strings.TrimPrefix(name, "-")
 	if i := strings.LastIndex(name, "/"); i >= 0 {
 		name = name[i+1:]
 	}

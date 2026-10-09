@@ -44,7 +44,7 @@ func promptGUI(label string) ([]byte, error) {
 		return nil, errors.New("unlocker: no terminal and no GUI prompt on this OS")
 	}
 	msg := strings.TrimSpace(PromptMessage + "\n\n" + label)
-	out, err := runOsascript("-e", dialogScript, msg)
+	out, err := runOsascript("-e", dialogScript, "--", msg)
 	if err != nil {
 		return nil, err
 	}

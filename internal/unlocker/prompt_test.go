@@ -24,6 +24,9 @@ func TestPromptGUI(t *testing.T) {
 	if err != nil || string(pw) != "s3cret" {
 		t.Fatalf("%q %v", pw, err)
 	}
+	if gotArgs[len(gotArgs)-2] != "--" {
+		t.Fatalf("message must follow --: %q", gotArgs)
+	}
 	if gotArgs[len(gotArgs)-1] != "claude requests: get X\n\nVault password" {
 		t.Fatalf("message %q", gotArgs[len(gotArgs)-1])
 	}
