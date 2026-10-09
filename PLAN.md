@@ -40,7 +40,7 @@ Registry via `Register()` in `init()`. `touchid` behind darwin build tag, stub e
 - [x] 0. Repo + scaffold
 - [x] 1. vault package: format, seal/open, multi-wrapped-key header, tests
 - [x] 2. Unlocker interface, registry, password unlocker (argon2id), tests
-- [ ] 3. configure, set, get
-- [ ] 4. Session file, unlock, lock, status, TTL
+- [x] 3. configure, set, get
+- [x] 4. Session file, unlock, lock, status, TTL
 - [ ] 5. Touch ID spike, then touchid unlocker (cgo, darwin tag), signing in Makefile
 - [ ] 6. README threat model, release, optional run/list/delete
