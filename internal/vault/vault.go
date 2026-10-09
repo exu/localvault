@@ -3,6 +3,7 @@ package vault
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,8 +14,10 @@ import (
 )
 
 const (
-	Version = 1
-	DEKSize = chacha20poly1305.KeySize
+	// Version 2 authenticates the unlocker list; version 1 files still open and upgrade on next save.
+	Version       = 2
+	legacyVersion = 1
+	DEKSize       = chacha20poly1305.KeySize
 )
 
 var ErrDecrypt = errors.New("vault: decryption failed")
@@ -42,6 +45,19 @@ func NewDEK() ([]byte, error) {
 	return dek, nil
 }
 
+// aad binds the format version and the unlocker list to the ciphertext.
+func aad(version int, entries []Entry) ([]byte, error) {
+	if version == legacyVersion {
+		return []byte{legacyVersion}, nil
+	}
+	h, err := json.Marshal(entries)
+	if err != nil {
+		return nil, err
+	}
+	sum := sha256.Sum256(h)
+	return append([]byte{byte(version)}, sum[:]...), nil
+}
+
 // Seal encrypts secrets with dek and returns a File carrying the given unlocker entries.
 func Seal(dek []byte, secrets map[string]string, entries []Entry) (*File, error) {
 	aead, err := chacha20poly1305.NewX(dek)
@@ -56,17 +72,21 @@ func Seal(dek []byte, secrets map[string]string, entries []Entry) (*File, error)
 	if _, err := rand.Read(nonce); err != nil {
 		return nil, err
 	}
+	ad, err := aad(Version, entries)
+	if err != nil {
+		return nil, err
+	}
 	return &File{
 		Version:    Version,
 		Unlockers:  entries,
 		Nonce:      nonce,
-		Ciphertext: aead.Seal(nil, nonce, plain, []byte{Version}),
+		Ciphertext: aead.Seal(nil, nonce, plain, ad),
 	}, nil
 }
 
 // Open decrypts the secrets with dek.
 func (f *File) Open(dek []byte) (map[string]string, error) {
-	if f.Version != Version {
+	if f.Version != Version && f.Version != legacyVersion {
 		return nil, fmt.Errorf("vault: unsupported version %d", f.Version)
 	}
 	aead, err := chacha20poly1305.NewX(dek)
@@ -76,7 +96,11 @@ func (f *File) Open(dek []byte) (map[string]string, error) {
 	if len(f.Nonce) != aead.NonceSize() {
 		return nil, ErrDecrypt
 	}
-	plain, err := aead.Open(nil, f.Nonce, f.Ciphertext, []byte{Version})
+	ad, err := aad(f.Version, f.Unlockers)
+	if err != nil {
+		return nil, err
+	}
+	plain, err := aead.Open(nil, f.Nonce, f.Ciphertext, ad)
 	if err != nil {
 		return nil, ErrDecrypt
 	}

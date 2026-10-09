@@ -212,12 +212,12 @@ func (a *App) enroll(cmd *cobra.Command, f *vault.File, u unlocker.Unlocker) err
 	if err != nil {
 		return err
 	}
-	entries := append([]vault.Entry(nil), f.Unlockers...)
-	nf, err := vault.Seal(dek, secrets, entries)
+	updated := &vault.File{Unlockers: append([]vault.Entry(nil), f.Unlockers...)}
+	updated.SetEntry(vault.Entry{Name: u.Name(), Blob: blob})
+	nf, err := vault.Seal(dek, secrets, updated.Unlockers)
 	if err != nil {
 		return err
 	}
-	nf.SetEntry(vault.Entry{Name: u.Name(), Blob: blob})
 	if err := vault.Save(a.vaultPath(), nf); err != nil {
 		return err
 	}
