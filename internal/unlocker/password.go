@@ -1,6 +1,7 @@
 package unlocker
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/json"
 	"errors"
@@ -36,16 +37,22 @@ type passwordBlob struct {
 type Password struct {
 	// Prompt returns the password, from a terminal by default.
 	Prompt func() ([]byte, error)
-	Params Params
+	// Confirm, when set, is asked on Enroll and must match Prompt.
+	Confirm func() ([]byte, error)
+	Params  Params
 }
 
 // NewPassword returns a Password unlocker that prompts on the terminal.
 func NewPassword() *Password {
-	return &Password{Prompt: promptTerminal, Params: DefaultParams}
+	return &Password{
+		Prompt:  func() ([]byte, error) { return promptTerminal("Password: ") },
+		Confirm: func() ([]byte, error) { return promptTerminal("Confirm password: ") },
+		Params:  DefaultParams,
+	}
 }
 
-func promptTerminal() ([]byte, error) {
-	fmt.Fprint(os.Stderr, "Password: ")
+func promptTerminal(label string) ([]byte, error) {
+	fmt.Fprint(os.Stderr, label)
 	pw, err := term.ReadPassword(int(os.Stdin.Fd()))
 	fmt.Fprintln(os.Stderr)
 	return pw, err
@@ -65,6 +72,15 @@ func (p *Password) Enroll(dek []byte) ([]byte, error) {
 	}
 	if len(pw) == 0 {
 		return nil, errors.New("unlocker: empty password")
+	}
+	if p.Confirm != nil {
+		again, err := p.Confirm()
+		if err != nil {
+			return nil, err
+		}
+		if !bytes.Equal(pw, again) {
+			return nil, errors.New("unlocker: passwords do not match")
+		}
 	}
 	salt := make([]byte, 16)
 	if _, err := rand.Read(salt); err != nil {

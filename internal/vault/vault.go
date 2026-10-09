@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
+	"github.com/exu/localvault/internal/fsutil"
 	"golang.org/x/crypto/chacha20poly1305"
 )
 
@@ -127,25 +127,5 @@ func Save(path string, f *File) error {
 	if err != nil {
 		return err
 	}
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return err
-	}
-	tmp, err := os.CreateTemp(dir, ".vault-*")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmp.Name())
-	if _, err := tmp.Write(b); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Chmod(0o600); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmp.Name(), path)
+	return fsutil.WriteAtomic(path, b)
 }

@@ -66,3 +66,15 @@ func TestRegistry(t *testing.T) {
 		t.Fatal("no names")
 	}
 }
+
+func TestPasswordConfirm(t *testing.T) {
+	p := pw("a")
+	p.Confirm = func() ([]byte, error) { return []byte("b"), nil }
+	if _, err := p.Enroll(make([]byte, 32)); err == nil {
+		t.Fatal("expected mismatch error")
+	}
+	p.Confirm = func() ([]byte, error) { return []byte("a"), nil }
+	if _, err := p.Enroll(make([]byte, 32)); err != nil {
+		t.Fatal(err)
+	}
+}
