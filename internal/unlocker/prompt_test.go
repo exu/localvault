@@ -2,14 +2,17 @@ package unlocker
 
 import (
 	"errors"
+	"io/fs"
 	"strings"
 	"testing"
 )
 
 func stubDialog(t *testing.T, os string, programs ...string) *[]string {
 	t.Helper()
-	origGoos, origLook, origRun, origEnv := goos, lookPath, runDialog, getenv
-	t.Cleanup(func() { goos, lookPath, runDialog, getenv = origGoos, origLook, origRun, origEnv })
+	origGoos, origLook, origRun, origEnv, origDir, origPin := goos, lookPath, runDialog, getenv, readDir, runPinentry
+	t.Cleanup(func() {
+		goos, lookPath, runDialog, getenv, readDir, runPinentry = origGoos, origLook, origRun, origEnv, origDir, origPin
+	})
 	goos = os
 	getenv = func(k string) string {
 		if k == "DISPLAY" {
@@ -17,6 +20,7 @@ func stubDialog(t *testing.T, os string, programs ...string) *[]string {
 		}
 		return ""
 	}
+	readDir = func(string) ([]fs.DirEntry, error) { return nil, errors.New("no dir") }
 	lookPath = func(name string) (string, error) {
 		for _, p := range programs {
 			if p == name {
@@ -78,7 +82,7 @@ func TestPromptGUILinuxBackends(t *testing.T) {
 
 func TestPromptGUILinuxErrors(t *testing.T) {
 	stubDialog(t, "linux")
-	if _, err := promptGUI("x"); err == nil || !strings.Contains(err.Error(), "zenity") {
+	if _, err := promptGUI("x"); err == nil || !strings.Contains(err.Error(), "pinentry") {
 		t.Fatalf("no program: %v", err)
 	}
 	getenv = func(string) string { return "" }
