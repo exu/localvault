@@ -53,7 +53,7 @@ func TestFlow(t *testing.T) {
 	}
 	e.must("configure")
 
-	if _, err := e.run("set", "A=1"); err == nil || !strings.Contains(err.Error(), "locked") {
+	if _, err := e.run("set", "A=1", "--no-prompt"); err == nil || !strings.Contains(err.Error(), "locked") {
 		t.Fatalf("locked set: %v", err)
 	}
 	if out := e.must("status"); !strings.Contains(out, "locked") {
@@ -77,7 +77,7 @@ func TestFlow(t *testing.T) {
 	}
 
 	e.must("lock")
-	if _, err := e.run("get", "A"); err == nil || !strings.Contains(err.Error(), "locked") {
+	if _, err := e.run("get", "A", "--no-prompt"); err == nil || !strings.Contains(err.Error(), "locked") {
 		t.Fatalf("after lock: %v", err)
 	}
 }
@@ -173,5 +173,46 @@ func TestListDeleteRun(t *testing.T) {
 	}
 	if _, err := e.run("delete", "A"); err == nil {
 		t.Fatal("expected not found")
+	}
+}
+
+func TestAutoUnlockOnLocked(t *testing.T) {
+	e := newEnv(t)
+	e.must("configure")
+	e.must("unlock")
+	e.must("set", "A=1")
+	e.must("lock")
+
+	if _, err := e.run("get", "A", "--no-prompt"); err == nil || !strings.Contains(err.Error(), "locked") {
+		t.Fatalf("no-prompt: %v", err)
+	}
+	if got := e.must("get", "A"); got != "1\n" {
+		t.Fatalf("auto unlock get %q", got)
+	}
+	if out := e.must("status"); !strings.Contains(out, "unlocked") {
+		t.Fatalf("session not started: %q", out)
+	}
+
+	e.pw = "wrong"
+	e.must("lock")
+	if _, err := e.run("get", "A"); err == nil {
+		t.Fatal("expected wrong password error")
+	}
+}
+
+func TestDescribeHidesValues(t *testing.T) {
+	e := newEnv(t)
+	root := e.app.NewRoot()
+	setCmd, _, _ := root.Find([]string{"set"})
+	if got := describe(setCmd, []string{"A=topsecret", "B=x"}); got != "set A, B" {
+		t.Fatalf("describe %q", got)
+	}
+	getCmd, _, _ := root.Find([]string{"get"})
+	if got := describe(getCmd, []string{"TOKEN"}); got != "get TOKEN" {
+		t.Fatalf("describe %q", got)
+	}
+	runCmd, _, _ := root.Find([]string{"run"})
+	if got := describe(runCmd, []string{strings.Repeat("x", 100)}); len(got) != len("run ")+63 {
+		t.Fatalf("run not truncated: %q", got)
 	}
 }

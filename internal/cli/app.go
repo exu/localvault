@@ -23,10 +23,12 @@ var errLocked = errors.New("locked, run `localvault unlock`")
 
 // App holds the vault directory and IO streams for the commands.
 type App struct {
-	Dir string
-	In  io.Reader
-	Out io.Writer
-	Err io.Writer
+	Dir      string
+	noPrompt bool
+	reqDesc  string
+	In       io.Reader
+	Out      io.Writer
+	Err      io.Writer
 }
 
 // DefaultDir returns $LOCALVAULT_DIR or ~/.localvault.
@@ -51,7 +53,12 @@ func (a *App) NewRoot() *cobra.Command {
 		Short:         "Local secret vault unlocked by password",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			a.reqDesc = describe(cmd, args)
+			unlocker.PromptMessage = fmt.Sprintf("%s requests: %s\nUnlocking starts a session for %s.", parentName(), a.reqDesc, defaultTTL)
+		},
 	}
+	root.PersistentFlags().BoolVar(&a.noPrompt, "no-prompt", false, "fail when locked instead of prompting for the password")
 	root.SetIn(a.In)
 	root.SetOut(a.Out)
 	root.SetErr(a.Err)
@@ -112,6 +119,9 @@ func (a *App) openSession() (*vault.File, []byte, map[string]string, error) {
 		return nil, nil, nil, err
 	}
 	dek, err := a.sessionDEK()
+	if errors.Is(err, errLocked) && !a.noPrompt {
+		dek, err = a.autoUnlock(f)
+	}
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -120,6 +130,21 @@ func (a *App) openSession() (*vault.File, []byte, map[string]string, error) {
 		return nil, nil, nil, err
 	}
 	return f, dek, secrets, nil
+}
+
+// autoUnlock prompts for the default unlocker and starts a session with the default TTL.
+func (a *App) autoUnlock(f *vault.File) ([]byte, error) {
+	dek, err := a.unlockWith(f, "")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := f.Open(dek); err != nil {
+		return nil, err
+	}
+	if err := session.Write(a.sessionPath(), dek, defaultTTL); err != nil {
+		return nil, err
+	}
+	return dek, nil
 }
 
 func (a *App) configureCmd() *cobra.Command {

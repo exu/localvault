@@ -6,11 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/chacha20poly1305"
-	"golang.org/x/term"
 )
 
 // ErrBadPassword is returned when the password cannot unwrap the DEK.
@@ -45,17 +43,10 @@ type Password struct {
 // NewPassword returns a Password unlocker that prompts on the terminal.
 func NewPassword() *Password {
 	return &Password{
-		Prompt:  func() ([]byte, error) { return promptTerminal("Password: ") },
-		Confirm: func() ([]byte, error) { return promptTerminal("Confirm password: ") },
+		Prompt:  func() ([]byte, error) { return readPassword("Vault password") },
+		Confirm: func() ([]byte, error) { return readPassword("Confirm vault password") },
 		Params:  DefaultParams,
 	}
-}
-
-func promptTerminal(label string) ([]byte, error) {
-	fmt.Fprint(os.Stderr, label)
-	pw, err := term.ReadPassword(int(os.Stdin.Fd()))
-	fmt.Fprintln(os.Stderr)
-	return pw, err
 }
 
 func (p *Password) Name() string    { return "password" }
