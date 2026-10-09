@@ -2,51 +2,100 @@ package unlocker
 
 import (
 	"errors"
-	"runtime"
+	"strings"
 	"testing"
 )
 
-func TestPromptGUI(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("darwin only")
+func stubDialog(t *testing.T, os string, programs ...string) *[]string {
+	t.Helper()
+	origGoos, origLook, origRun, origEnv := goos, lookPath, runDialog, getenv
+	t.Cleanup(func() { goos, lookPath, runDialog, getenv = origGoos, origLook, origRun, origEnv })
+	goos = os
+	getenv = func(k string) string {
+		if k == "DISPLAY" {
+			return ":0"
+		}
+		return ""
 	}
-	orig := runOsascript
-	defer func() { runOsascript = orig }()
+	lookPath = func(name string) (string, error) {
+		for _, p := range programs {
+			if p == name {
+				return "/usr/bin/" + name, nil
+			}
+		}
+		return "", errors.New("not found")
+	}
+	var got []string
+	runDialog = func(name string, args ...string) ([]byte, error) {
+		got = append([]string{name}, args...)
+		return []byte("s3cret\n"), nil
+	}
+	return &got
+}
+
+func TestPromptGUIDarwin(t *testing.T) {
+	got := stubDialog(t, "darwin")
 	PromptMessage = "claude requests: get X"
 	defer func() { PromptMessage = "" }()
 
-	var gotArgs []string
-	runOsascript = func(args ...string) ([]byte, error) {
-		gotArgs = args
-		return []byte("s3cret\n"), nil
-	}
 	pw, err := promptGUI("Vault password")
 	if err != nil || string(pw) != "s3cret" {
 		t.Fatalf("%q %v", pw, err)
 	}
-	if gotArgs[len(gotArgs)-2] != "--" {
-		t.Fatalf("message must follow --: %q", gotArgs)
+	args := *got
+	if args[0] != "osascript" || args[len(args)-2] != "--" {
+		t.Fatalf("args %q", args)
 	}
-	if gotArgs[len(gotArgs)-1] != "claude requests: get X\n\nVault password" {
-		t.Fatalf("message %q", gotArgs[len(gotArgs)-1])
+	if args[len(args)-1] != "claude requests: get X\n\nVault password" {
+		t.Fatalf("message %q", args[len(args)-1])
 	}
 
-	runOsascript = func(...string) ([]byte, error) { return nil, ErrCancelled }
+	runDialog = func(string, ...string) ([]byte, error) { return nil, ErrCancelled }
 	if _, err := promptGUI("x"); !errors.Is(err, ErrCancelled) {
 		t.Fatalf("got %v", err)
 	}
 }
 
-func TestReadPasswordForcedGUI(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("darwin only")
+func TestPromptGUILinuxBackends(t *testing.T) {
+	for _, tc := range []struct {
+		programs []string
+		want     string
+	}{
+		{[]string{"zenity", "kdialog"}, "zenity"},
+		{[]string{"kdialog"}, "kdialog"},
+		{[]string{"yad"}, "yad"},
+	} {
+		got := stubDialog(t, "linux", tc.programs...)
+		pw, err := promptGUI("Vault password")
+		if err != nil || string(pw) != "s3cret" {
+			t.Fatalf("%s: %q %v", tc.want, pw, err)
+		}
+		if (*got)[0] != tc.want {
+			t.Fatalf("backend %q want %q", (*got)[0], tc.want)
+		}
 	}
-	orig := runOsascript
-	defer func() { runOsascript = orig }()
-	runOsascript = func(...string) ([]byte, error) { return []byte("pw\n"), nil }
+}
+
+func TestPromptGUILinuxErrors(t *testing.T) {
+	stubDialog(t, "linux")
+	if _, err := promptGUI("x"); err == nil || !strings.Contains(err.Error(), "zenity") {
+		t.Fatalf("no program: %v", err)
+	}
+	getenv = func(string) string { return "" }
+	if _, err := promptGUI("x"); err == nil || !strings.Contains(err.Error(), "display") {
+		t.Fatalf("no display: %v", err)
+	}
+	goos = "windows"
+	if _, err := promptGUI("x"); err == nil {
+		t.Fatal("expected unsupported OS error")
+	}
+}
+
+func TestReadPasswordForcedGUI(t *testing.T) {
+	stubDialog(t, "darwin")
 	t.Setenv("LOCALVAULT_PROMPT", "gui")
 	pw, err := readPassword("x")
-	if err != nil || string(pw) != "pw" {
+	if err != nil || string(pw) != "s3cret" {
 		t.Fatalf("%q %v", pw, err)
 	}
 }

@@ -7,6 +7,8 @@ Local secret vault. No server, no auth service. Unlock with a password (Touch ID
     make build                                          # dist/localvault
     install -m 0755 dist/localvault ~/.local/bin/       # any dir on PATH
 
+Or download a release (macOS and Linux, amd64 and arm64) from the GitHub Releases page, check it against `SHA256SUMS`, untar, and put `localvault` on your PATH. `localvault --version` prints the version.
+
 ## Quick start
 
     localvault configure                  # first time: create vault, set password
@@ -62,6 +64,7 @@ When the vault is locked, `get`, `set`, `list`, `delete` and `run` start an unlo
 - no terminal (for example an AI agent running the command): a native macOS dialog opens. It names the requesting process and the command (key names only, never values) and the session length.
 - Cancelling the dialog, or 60 seconds without an answer, fails the command with `unlock cancelled`.
 - `LOCALVAULT_PROMPT=gui|tty` forces one kind of prompt.
+- macOS uses a built-in dialog. Linux needs a display (X11 or Wayland) and one of `zenity`, `kdialog` or `yad` installed; without them the command fails with an error telling you to install one, or to use a terminal.
 
 An agent can read secrets through `get` and `run` while a session is live, so keep the TTL short and run `localvault lock` when done.
 

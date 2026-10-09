@@ -23,6 +23,7 @@ var errLocked = errors.New("locked, run `localvault unlock`")
 
 // App holds the vault directory and IO streams for the commands.
 type App struct {
+	Version  string
 	Dir      string
 	noPrompt bool
 	reqDesc  string
@@ -51,6 +52,7 @@ func (a *App) NewRoot() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "localvault",
 		Short:         "Local secret vault unlocked by password",
+		Version:       a.Version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {

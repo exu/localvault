@@ -25,12 +25,24 @@ const dialogScript = `on run argv
 	return text returned of r
 end run`
 
-// runOsascript runs osascript with args; replaced in tests.
-var runOsascript = func(args ...string) ([]byte, error) {
+const dialogTimeout = 60
+
+var (
+	goos     = runtime.GOOS
+	lookPath = exec.LookPath
+	getenv   = os.Getenv
+)
+
+// runDialog runs a dialog program and returns its stdout; exit 1 or a timeout code means the user cancelled. Replaced in tests.
+var runDialog = func(name string, args ...string) ([]byte, error) {
 	var out, errb bytes.Buffer
-	c := exec.Command("osascript", args...)
+	c := exec.Command(name, args...)
 	c.Stdout, c.Stderr = &out, &errb
 	if err := c.Run(); err != nil {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) && (ee.ExitCode() == 1 || ee.ExitCode() == 5) && !strings.Contains(errb.String(), "rror:") {
+			return nil, ErrCancelled
+		}
 		if strings.Contains(errb.String(), "-128") || strings.Contains(errb.String(), "canceled") {
 			return nil, ErrCancelled
 		}
@@ -39,12 +51,41 @@ var runOsascript = func(args ...string) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
+// linuxDialog picks the first available GUI password dialog program.
+func linuxDialog(msg string) (string, []string, error) {
+	if getenv("DISPLAY") == "" && getenv("WAYLAND_DISPLAY") == "" {
+		return "", nil, errors.New("unlocker: no terminal and no display for a password dialog")
+	}
+	timeout := fmt.Sprint(dialogTimeout)
+	if _, err := lookPath("zenity"); err == nil {
+		return "zenity", []string{"--password", "--title=localvault", "--text=" + msg, "--timeout=" + timeout}, nil
+	}
+	if _, err := lookPath("kdialog"); err == nil {
+		return "kdialog", []string{"--title", "localvault", "--password", msg}, nil
+	}
+	if _, err := lookPath("yad"); err == nil {
+		return "yad", []string{"--entry", "--hide-text", "--title=localvault", "--text=" + msg, "--timeout=" + timeout, "--button=Cancel:1", "--button=Unlock:0"}, nil
+	}
+	return "", nil, errors.New("unlocker: no terminal and no dialog program found, install zenity or kdialog")
+}
+
 func promptGUI(label string) ([]byte, error) {
-	if runtime.GOOS != "darwin" {
+	msg := strings.TrimSpace(PromptMessage + "\n\n" + label)
+	var out []byte
+	var err error
+	switch goos {
+	case "darwin":
+		out, err = runDialog("osascript", "-e", dialogScript, "--", msg)
+	case "linux":
+		var name string
+		var args []string
+		if name, args, err = linuxDialog(msg); err != nil {
+			return nil, err
+		}
+		out, err = runDialog(name, args...)
+	default:
 		return nil, errors.New("unlocker: no terminal and no GUI prompt on this OS")
 	}
-	msg := strings.TrimSpace(PromptMessage + "\n\n" + label)
-	out, err := runOsascript("-e", dialogScript, "--", msg)
 	if err != nil {
 		return nil, err
 	}
