@@ -29,7 +29,7 @@ Vault lives in `~/.localvault` (override with `LOCALVAULT_DIR`).
 
 - Random 32-byte key (DEK) encrypts the vault with XChaCha20-Poly1305.
 - Each unlocker stores its own wrapped DEK in the vault header; add or remove unlockers without re-encrypting.
-- Password unlocker: argon2id derives the wrapping key.
+- Password unlocker: argon2id (512 MiB, ~250ms per guess) derives the wrapping key. The unlocker list is authenticated, so stripping or swapping entries breaks decryption.
 - Unlockers are pluggable: implement `unlocker.Unlocker` and call `unlocker.Register`.
 - `unlock` writes the DEK plus an expiry to `~/.localvault/session` (0600) until the TTL ends.
 

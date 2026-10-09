@@ -2,6 +2,7 @@ package vault
 
 import (
 	"errors"
+	"golang.org/x/crypto/chacha20poly1305"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -85,5 +86,36 @@ func TestSaveLoad(t *testing.T) {
 	}
 	if _, err := Load(filepath.Join(t.TempDir(), "missing")); !os.IsNotExist(err) {
 		t.Fatalf("missing: %v", err)
+	}
+}
+
+func TestHeaderAuthenticated(t *testing.T) {
+	dek, _ := NewDEK()
+	f, _ := Seal(dek, map[string]string{"A": "1"}, []Entry{{Name: "password", Blob: []byte("p")}, {Name: "touchid", Blob: []byte("t")}})
+
+	stripped := *f
+	stripped.Unlockers = f.Unlockers[:1]
+	if _, err := stripped.Open(dek); !errors.Is(err, ErrDecrypt) {
+		t.Fatalf("stripped header: %v", err)
+	}
+	swapped := *f
+	swapped.Unlockers = []Entry{{Name: "password", Blob: []byte("evil")}, f.Unlockers[1]}
+	if _, err := swapped.Open(dek); !errors.Is(err, ErrDecrypt) {
+		t.Fatalf("swapped blob: %v", err)
+	}
+}
+
+func TestLegacyV1StillOpens(t *testing.T) {
+	dek, _ := NewDEK()
+	aead, _ := chacha20poly1305.NewX(dek)
+	nonce := make([]byte, aead.NonceSize())
+	f := &File{Version: 1, Nonce: nonce, Ciphertext: aead.Seal(nil, nonce, []byte(`{"A":"1"}`), []byte{1})}
+	got, err := f.Open(dek)
+	if err != nil || got["A"] != "1" {
+		t.Fatalf("%v %v", got, err)
+	}
+	nf, _ := Seal(dek, got, f.Unlockers)
+	if nf.Version != Version {
+		t.Fatalf("not upgraded: %d", nf.Version)
 	}
 }

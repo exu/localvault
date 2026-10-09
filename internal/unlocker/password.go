@@ -22,7 +22,7 @@ type Params struct {
 }
 
 // DefaultParams are the argon2id parameters used for new enrollments.
-var DefaultParams = Params{Time: 3, Memory: 64 * 1024, Threads: 4}
+var DefaultParams = Params{Time: 3, Memory: 512 * 1024, Threads: 4}
 
 type passwordBlob struct {
 	Params
