@@ -4,10 +4,25 @@ Local secret vault. No server, no auth service. Unlock with a password (Touch ID
 
 ## Install
 
-    make build                                          # dist/localvault
-    install -m 0755 dist/localvault ~/.local/bin/       # any dir on PATH
+Homebrew (macOS and Linux):
 
-Or download a release (macOS and Linux, amd64 and arm64) from the GitHub Releases page, check it against `SHA256SUMS`, untar, and put `localvault` on your PATH. `localvault --version` prints the version.
+    brew install exu/tap/localvault
+
+Install script (macOS and Linux, amd64 and arm64). It downloads the release, verifies its SHA256 checksum, and installs to `~/.local/bin`:
+
+    curl -fsSL https://raw.githubusercontent.com/exu/localvault/main/install.sh | sh
+
+Options are environment variables: `VERSION=v0.1.0` pins a release, `INSTALL_DIR=/usr/local/bin` changes the target (use `sudo` if needed). Make sure the install directory is on your `PATH`.
+
+Manual: download a tarball and `SHA256SUMS` from the [Releases](https://github.com/exu/localvault/releases) page, verify with `shasum -a 256 -c SHA256SUMS --ignore-missing`, untar, and copy `localvault` onto your `PATH`.
+
+From source (Go 1.27+):
+
+    git clone https://github.com/exu/localvault && cd localvault
+    make build                                      # dist/localvault
+    install -m 0755 dist/localvault ~/.local/bin/
+
+Check with `localvault --version`, then run `localvault configure`.
 
 ## Quick start
 
