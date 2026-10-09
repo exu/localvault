@@ -53,9 +53,6 @@ var runDialog = func(name string, args ...string) ([]byte, error) {
 
 // linuxDialog picks the first available GUI password dialog program.
 func linuxDialog(msg string) (string, []string, error) {
-	if getenv("DISPLAY") == "" && getenv("WAYLAND_DISPLAY") == "" {
-		return "", nil, errors.New("unlocker: no terminal and no display for a password dialog")
-	}
 	timeout := fmt.Sprint(dialogTimeout)
 	if _, err := lookPath("zenity"); err == nil {
 		return "zenity", []string{"--password", "--title=localvault", "--text=" + msg, "--timeout=" + timeout}, nil
@@ -66,7 +63,7 @@ func linuxDialog(msg string) (string, []string, error) {
 	if _, err := lookPath("yad"); err == nil {
 		return "yad", []string{"--entry", "--hide-text", "--title=localvault", "--text=" + msg, "--timeout=" + timeout, "--button=Cancel:1", "--button=Unlock:0"}, nil
 	}
-	return "", nil, errors.New("unlocker: no terminal and no dialog program found, install zenity or kdialog")
+	return "", nil, errors.New("unlocker: no terminal and no dialog program found, install pinentry (gnome3, qt or gtk), zenity or kdialog")
 }
 
 func promptGUI(label string) ([]byte, error) {
@@ -77,6 +74,16 @@ func promptGUI(label string) ([]byte, error) {
 	case "darwin":
 		out, err = runDialog("osascript", "-e", dialogScript, "--", msg)
 	case "linux":
+		if !ensureDisplayEnv() {
+			return nil, errors.New("unlocker: no terminal and no display for a password dialog")
+		}
+		if prog, ok := findPinentry(); ok {
+			pw, err := runPinentry(prog, PromptMessage, label+":")
+			if err != nil {
+				return nil, err
+			}
+			return pw, nil
+		}
 		var name string
 		var args []string
 		if name, args, err = linuxDialog(msg); err != nil {
