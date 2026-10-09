@@ -48,14 +48,14 @@ func (a *App) sessionPath() string { return filepath.Join(a.Dir, "session") }
 func (a *App) NewRoot() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "localvault",
-		Short:         "Local secret vault unlocked by password or Touch ID",
+		Short:         "Local secret vault unlocked by password",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
 	root.SetIn(a.In)
 	root.SetOut(a.Out)
 	root.SetErr(a.Err)
-	root.AddCommand(a.configureCmd(), a.setCmd(), a.getCmd(), a.unlockCmd(), a.lockCmd(), a.statusCmd())
+	root.AddCommand(a.configureCmd(), a.setCmd(), a.getCmd(), a.unlockCmd(), a.lockCmd(), a.statusCmd(), a.listCmd(), a.deleteCmd(), a.runCmd())
 	return root
 }
 

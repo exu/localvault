@@ -152,3 +152,26 @@ func TestUnlockNotEnrolledAndUnknownUnlocker(t *testing.T) {
 		t.Fatal("expected unknown unlocker")
 	}
 }
+
+func TestListDeleteRun(t *testing.T) {
+	e := newEnv(t)
+	e.must("configure")
+	e.must("unlock")
+	e.must("set", "B=2", "A=hello world")
+	if got := e.must("list"); got != "A\nB\n" {
+		t.Fatalf("list %q", got)
+	}
+	if got := e.must("run", `printf '%s|%s' "$env[A]" $env[B]`); got != "hello world|2" {
+		t.Fatalf("run %q", got)
+	}
+	if _, err := e.run("run", "echo $env[NOPE]"); err == nil {
+		t.Fatal("expected missing key error")
+	}
+	e.must("delete", "A")
+	if got := e.must("list"); got != "B\n" {
+		t.Fatalf("list after delete %q", got)
+	}
+	if _, err := e.run("delete", "A"); err == nil {
+		t.Fatal("expected not found")
+	}
+}

@@ -43,4 +43,10 @@ Registry via `Register()` in `init()`. `touchid` behind darwin build tag, stub e
 - [x] 3. configure, set, get
 - [x] 4. Session file, unlock, lock, status, TTL
 - [ ] 5. Touch ID spike, then touchid unlocker (cgo, darwin tag), signing in Makefile
-- [ ] 6. README threat model, release, optional run/list/delete
+- [x] 6. README threat model, release, optional run/list/delete
+
+## Touch ID spike result (2026-10-09)
+- Touch ID hardware available (LAContext canEvaluate = true).
+- `SecItemAdd` with `kSecAccessControlBiometryCurrentSet` + Data Protection keychain fails with -34018 for both unsigned and ad-hoc signed binaries.
+- Needs `keychain-access-groups` entitlement, which needs an Apple Developer identity + provisioning profile. None on this machine (0 codesigning identities).
+- Milestone 5 blocked on that decision. Weaker LAContext-gate fallback rejected earlier.
