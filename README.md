@@ -21,6 +21,8 @@ Local secret vault. No server, no auth service. Unlock with a password (Touch ID
 
 `run` exposes each `$env[NAME]` as an environment variable of the child shell, so values never appear in `ps` output.
 
+When the vault is locked, `get`/`set`/`list`/`delete`/`run` start an unlock themselves: a terminal prompt if stdin is a TTY, otherwise a native macOS dialog naming the requesting process and command (secret values never shown). Pass `--no-prompt` to fail instead; `LOCALVAULT_PROMPT=gui|tty` forces the prompt kind. Cancel or a 60s timeout aborts with "unlock cancelled".
+
 Vault lives in `~/.localvault` (override with `LOCALVAULT_DIR`).
 
 ## Design
