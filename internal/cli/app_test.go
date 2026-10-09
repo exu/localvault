@@ -161,7 +161,7 @@ func TestListDeleteRun(t *testing.T) {
 	if got := e.must("list"); got != "A\nB\n" {
 		t.Fatalf("list %q", got)
 	}
-	if got := e.must("run", `printf '%s|%s' "$env[A]" $env[B]`); got != "hello world|2" {
+	if got := e.must("run", `printf '%s|%s' "$env[A]" $env[B]`); !strings.HasSuffix(got, "[REDACTED:A]|2") {
 		t.Fatalf("run %q", got)
 	}
 	if _, err := e.run("run", "echo $env[NOPE]"); err == nil {
@@ -214,5 +214,19 @@ func TestDescribeHidesValues(t *testing.T) {
 	runCmd, _, _ := root.Find([]string{"run"})
 	if got := describe(runCmd, []string{strings.Repeat("x", 100)}); len(got) != len("run ")+63 {
 		t.Fatalf("run not truncated: %q", got)
+	}
+}
+
+func TestRunRedactsOutput(t *testing.T) {
+	e := newEnv(t)
+	e.must("configure")
+	e.must("unlock")
+	e.must("set", "TOKEN=supersecretvalue", "OTHER=anotherone")
+
+	if got := e.must("run", `echo $env[TOKEN]; echo token=supersecretvalue >&2`); strings.Contains(got, "supersecretvalue") || !strings.Contains(got, "[REDACTED:TOKEN]") {
+		t.Fatalf("leak or no redaction: %q", got)
+	}
+	if got := e.must("run", `echo $env[TOKEN]; env`); strings.Contains(got, "anotherone") || !strings.Contains(got, "[REDACTED:TOKEN]") {
+		t.Fatalf("unreferenced secret leaked: %q", got)
 	}
 }
