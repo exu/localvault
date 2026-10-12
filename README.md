@@ -92,6 +92,21 @@ An agent can read secrets through `get` and `run` while a session is live, so ke
 | `LOCALVAULT_DIR` | Use a different vault directory (handy for testing). |
 | `LOCALVAULT_PROMPT` | `gui` or `tty` to force the password prompt kind. |
 
+## For AI agents
+
+A ready-made agent skill teaches an agent to install localvault, check for secrets, use `run` (never `get`), and ask you for missing values instead of reading them.
+
+Claude Code:
+
+    claude plugin marketplace add exu/localvault
+    claude plugin install localvault@localvault
+
+Other agents that support the open [SKILL.md](https://agentskills.io) format (Codex, Cursor and others), via the `skills` CLI:
+
+    npx skills add exu/localvault
+
+Or copy `skills/localvault/` into your agent's skills directory. Agents without skill support can read https://localvault.wyso.cc/llms.txt, a short plain-text version of the same rules.
+
 ## Design
 
 - Random 32-byte key (DEK) encrypts the vault with XChaCha20-Poly1305.
