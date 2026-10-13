@@ -1,0 +1,25 @@
+# localvault
+
+> Local secret vault for the command line. `localvault run` injects secrets into a command and scrubs every stored value from its output, so AI agents can use credentials without seeing them.
+
+Agent instructions (the full skill): https://raw.githubusercontent.com/exu/localvault/main/skills/localvault/SKILL.md
+
+## Install
+- Homebrew: `brew install exu/tap/localvault`
+- Script: `curl -fsSL https://raw.githubusercontent.com/exu/localvault/main/install.sh | sh`
+- Releases: https://github.com/exu/localvault/releases
+
+## Use
+- Run with secrets: `localvault run 'curl -H "Authorization: Bearer $env[API_TOKEN]" https://example.com'`
+- List names (no values): `localvault list --no-prompt`
+- Session state: `localvault status`
+- Missing secret: ask the user to run `pbpaste | localvault set NAME=-` in their own terminal.
+
+## Rules
+- Never run `localvault get` (prints the raw value). Use `run`.
+- Never read `~/.localvault/`. Never ask for or choose the user's password.
+- A locked vault opens a password dialog on the user's screen. "unlock cancelled" means ask the user, do not retry in a loop.
+
+## Docs
+- Site: https://localvault.wyso.cc
+- Source: https://github.com/exu/localvault
