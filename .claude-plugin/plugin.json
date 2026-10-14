@@ -1,7 +1,7 @@
 {
   "name": "localvault",
   "description": "Teach Claude to install and use localvault so commands can use secrets without exposing the values.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": { "name": "exu" },
   "homepage": "https://localvault.wyso.cc",
   "repository": "https://github.com/exu/localvault"
