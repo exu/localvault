@@ -83,12 +83,9 @@ func (a *App) runCmd() *cobra.Command {
 			c := exec.Command("sh", "-c", script)
 			c.Env = env
 			c.Stdin = cmd.InOrStdin()
-			stdout, skipped := newRedactor(cmd.OutOrStdout(), secrets)
-			stderr, _ := newRedactor(cmd.ErrOrStderr(), secrets)
+			stdout := newRedactor(cmd.OutOrStdout(), secrets)
+			stderr := newRedactor(cmd.ErrOrStderr(), secrets)
 			c.Stdout, c.Stderr = stdout, stderr
-			for _, n := range skipped {
-				fmt.Fprintf(cmd.ErrOrStderr(), "localvault: %s is too short to redact from output\n", n)
-			}
 			runErr := c.Run()
 			if err := stdout.Close(); err != nil {
 				return err
