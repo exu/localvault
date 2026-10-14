@@ -9,7 +9,7 @@ import (
 func redactAll(t *testing.T, secrets map[string]string, chunks ...string) (string, []string) {
 	t.Helper()
 	var out bytes.Buffer
-	r, skipped := newRedactor(&out, secrets)
+	r := newRedactor(&out, secrets)
 	for _, c := range chunks {
 		if _, err := r.Write([]byte(c)); err != nil {
 			t.Fatal(err)
@@ -18,7 +18,7 @@ func redactAll(t *testing.T, secrets map[string]string, chunks ...string) (strin
 	if err := r.Close(); err != nil {
 		t.Fatal(err)
 	}
-	return out.String(), skipped
+	return out.String(), nil
 }
 
 func TestRedactBasic(t *testing.T) {
@@ -54,10 +54,10 @@ func TestRedactLongestWinsAndTail(t *testing.T) {
 	}
 }
 
-func TestRedactSkipsShort(t *testing.T) {
-	got, skipped := redactAll(t, map[string]string{"K": "ab", "T": "longvalue"}, "ab longvalue")
-	if got != "ab [REDACTED:T]" || len(skipped) != 1 || skipped[0] != "K" {
-		t.Fatalf("got %q skipped %v", got, skipped)
+func TestRedactShortValues(t *testing.T) {
+	got, _ := redactAll(t, map[string]string{"K": "ab", "T": "longvalue"}, "ab longvalue")
+	if got != "[REDACTED:K] [REDACTED:T]" {
+		t.Fatalf("got %q", got)
 	}
 }
 

@@ -161,7 +161,7 @@ func TestListDeleteRun(t *testing.T) {
 	if got := e.must("list"); got != "A\nB\n" {
 		t.Fatalf("list %q", got)
 	}
-	if got := e.must("run", `printf '%s|%s' "$env[A]" $env[B]`); !strings.HasSuffix(got, "[REDACTED:A]|2") {
+	if got := e.must("run", `printf '%s|%s' "$env[A]" $env[B]`); !strings.HasSuffix(got, "[REDACTED:A]|[REDACTED:B]") {
 		t.Fatalf("run %q", got)
 	}
 	if _, err := e.run("run", "echo $env[NOPE]"); err == nil {

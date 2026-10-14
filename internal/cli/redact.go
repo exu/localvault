@@ -6,9 +6,6 @@ import (
 	"sort"
 )
 
-// minRedactLen is the shortest secret value that gets scrubbed; shorter ones would mangle output.
-const minRedactLen = 4
-
 type redactor struct {
 	w       io.Writer
 	secrets []secretVal
@@ -17,14 +14,13 @@ type redactor struct {
 }
 
 type secretVal struct {
-	name string
-	val  []byte
+	label []byte
+	val   []byte
 }
 
-// newRedactor returns a writer that replaces any secret value in the stream with [REDACTED:NAME], plus the names skipped for being too short.
-func newRedactor(w io.Writer, secrets map[string]string) (*redactor, []string) {
+// newRedactor returns a writer that replaces any secret value in the stream with [REDACTED:NAME].
+func newRedactor(w io.Writer, secrets map[string]string) *redactor {
 	r := &redactor{w: w}
-	var skipped []string
 	names := make([]string, 0, len(secrets))
 	for n := range secrets {
 		names = append(names, n)
@@ -32,16 +28,15 @@ func newRedactor(w io.Writer, secrets map[string]string) (*redactor, []string) {
 	sort.Strings(names)
 	for _, n := range names {
 		v := secrets[n]
-		if len(v) < minRedactLen {
-			skipped = append(skipped, n)
+		if v == "" {
 			continue
 		}
-		r.secrets = append(r.secrets, secretVal{n, []byte(v)})
+		r.secrets = append(r.secrets, secretVal{[]byte("[REDACTED:" + n + "]"), []byte(v)})
 		if len(v) > r.maxLen {
 			r.maxLen = len(v)
 		}
 	}
-	return r, skipped
+	return r
 }
 
 // next finds the earliest match in buf, preferring the longest on ties.
@@ -65,7 +60,7 @@ func (r *redactor) drain(final bool) error {
 		if i < 0 {
 			break
 		}
-		if _, err := r.w.Write(append(append([]byte{}, r.buf[:i]...), "[REDACTED:"+s.name+"]"...)); err != nil {
+		if _, err := r.w.Write(append(append([]byte{}, r.buf[:i]...), s.label...)); err != nil {
 			return err
 		}
 		r.buf = r.buf[i+len(s.val):]
