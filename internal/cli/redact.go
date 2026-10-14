@@ -6,9 +6,6 @@ import (
 	"sort"
 )
 
-// minNamedLen is the shortest value shown as [REDACTED:NAME]; shorter ones become ****.
-const minNamedLen = 4
-
 type redactor struct {
 	w       io.Writer
 	secrets []secretVal
@@ -21,7 +18,7 @@ type secretVal struct {
 	val   []byte
 }
 
-// newRedactor returns a writer that replaces any secret value in the stream with [REDACTED:NAME], or **** for short values.
+// newRedactor returns a writer that replaces any secret value in the stream with [REDACTED:NAME].
 func newRedactor(w io.Writer, secrets map[string]string) *redactor {
 	r := &redactor{w: w}
 	names := make([]string, 0, len(secrets))
@@ -34,11 +31,7 @@ func newRedactor(w io.Writer, secrets map[string]string) *redactor {
 		if v == "" {
 			continue
 		}
-		label := "[REDACTED:" + n + "]"
-		if len(v) < minNamedLen {
-			label = "****"
-		}
-		r.secrets = append(r.secrets, secretVal{[]byte(label), []byte(v)})
+		r.secrets = append(r.secrets, secretVal{[]byte("[REDACTED:" + n + "]"), []byte(v)})
 		if len(v) > r.maxLen {
 			r.maxLen = len(v)
 		}

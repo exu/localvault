@@ -158,7 +158,7 @@ localvault lock</code><button type="button">Copy</button></pre>
       <div class="grid">
         <div class="card"><h3>At rest</h3><p>A random key encrypts the vault. Each unlocker wraps its own copy, and the unlocker list is authenticated. The password unlocker uses argon2id (512 MiB, about 250 ms per guess).</p></div>
         <div class="card"><h3>While unlocked</h3><p>A session file holds the key until the TTL ends. Malware running as you can read it, so keep the TTL short and run <code>lock</code> when done.</p></div>
-        <div class="card"><h3>Redaction limits</h3><p>Only literal values are matched, not base64 or other transforms. Values shorter than 4 characters show as <code>****</code>.</p></div>
+        <div class="card"><h3>Redaction limits</h3><p>Only literal values are matched, not base64 or other transforms. A very short value also masks matching text elsewhere in the output.</p></div>
       </div>
     </section>
   </main>

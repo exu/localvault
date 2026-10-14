@@ -73,7 +73,7 @@ localvault set NAME=value              # or typed directly
 - Never read, copy or print files in `~/.localvault/` (vault and session file).
 - Never fetch a credential from another store (a Kubernetes Secret, another password manager, an env dump) to work around a missing secret. Ask the user to store it.
 - Never print the environment (`env`, `printenv`, `set`) inside `run` to inspect secrets, and do not try to encode or split a value to get around redaction.
-- Redaction matches literal values only. Values shorter than 4 characters show as `****`, so a `****` in output may be a short secret.
+- Redaction matches literal values only. A very short secret value also masks matching text in unrelated output.
 - Keep sessions short and run `localvault lock` when the task is done if the user asked for that.
 
 ## Quick reference

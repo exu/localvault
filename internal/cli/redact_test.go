@@ -54,9 +54,9 @@ func TestRedactLongestWinsAndTail(t *testing.T) {
 	}
 }
 
-func TestRedactShortMasked(t *testing.T) {
+func TestRedactShortValues(t *testing.T) {
 	got, _ := redactAll(t, map[string]string{"K": "ab", "T": "longvalue"}, "ab longvalue")
-	if got != "**** [REDACTED:T]" {
+	if got != "[REDACTED:K] [REDACTED:T]" {
 		t.Fatalf("got %q", got)
 	}
 }
