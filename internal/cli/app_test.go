@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"os"
 	"strings"
 	"testing"
 
@@ -228,5 +229,17 @@ func TestRunRedactsOutput(t *testing.T) {
 	}
 	if got := e.must("run", `echo $env[TOKEN]; env`); strings.Contains(got, "anotherone") || !strings.Contains(got, "[REDACTED:TOKEN]") {
 		t.Fatalf("unreferenced secret leaked: %q", got)
+	}
+}
+
+func TestPromptFlag(t *testing.T) {
+	e := newEnv(t)
+	t.Setenv("LOCALVAULT_PROMPT", "")
+	if _, err := e.run("status", "--prompt", "bogus"); err == nil || !strings.Contains(err.Error(), "--prompt must be gui or tty") {
+		t.Fatalf("expected invalid prompt error, got %v", err)
+	}
+	e.must("status", "--prompt", "gui")
+	if got := os.Getenv("LOCALVAULT_PROMPT"); got != "gui" {
+		t.Fatalf("env not set: %q", got)
 	}
 }
