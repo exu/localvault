@@ -78,7 +78,7 @@ When the vault is locked, `get`, `set`, `list`, `delete` and `run` start an unlo
 - stdin is a terminal: prompt in the terminal.
 - no terminal (for example an AI agent running the command): a native macOS dialog opens. It names the requesting process and the command (key names only, never values) and the session length.
 - Cancelling the dialog, or 60 seconds without an answer, fails the command with `unlock cancelled`.
-- `LOCALVAULT_PROMPT=gui|tty` forces one kind of prompt.
+- `--prompt gui|tty` (or `LOCALVAULT_PROMPT=gui|tty`) forces one kind of prompt; the flag wins over the variable.
 - macOS uses a built-in dialog. Linux needs a graphical session (Wayland or X11) and a dialog program, tried in this order: `pinentry-gnome3`, `pinentry-qt`, `pinentry-gtk` (already installed on Arch/Omarchy with gnupg), then `zenity`, `kdialog`, `yad`. If `WAYLAND_DISPLAY`/`DISPLAY` is unset (ssh, agents), the Wayland socket in `$XDG_RUNTIME_DIR` is found automatically, so the dialog opens on the machine's screen. Without a display or dialog program the command fails with an error; use a terminal instead.
 
 An agent can read secrets through `get` and `run` while a session is live, so keep the TTL short and run `localvault lock` when done.

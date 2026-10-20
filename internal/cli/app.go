@@ -23,13 +23,14 @@ var errLocked = errors.New("locked, run `localvault unlock`")
 
 // App holds the vault directory and IO streams for the commands.
 type App struct {
-	Version  string
-	Dir      string
-	noPrompt bool
-	reqDesc  string
-	In       io.Reader
-	Out      io.Writer
-	Err      io.Writer
+	Version    string
+	Dir        string
+	noPrompt   bool
+	promptKind string
+	reqDesc    string
+	In         io.Reader
+	Out        io.Writer
+	Err        io.Writer
 }
 
 // DefaultDir returns $LOCALVAULT_DIR or ~/.localvault.
@@ -55,12 +56,20 @@ func (a *App) NewRoot() *cobra.Command {
 		Version:       a.Version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if a.promptKind != "" {
+				if a.promptKind != "gui" && a.promptKind != "tty" {
+					return fmt.Errorf("--prompt must be gui or tty, got %q", a.promptKind)
+				}
+				os.Setenv("LOCALVAULT_PROMPT", a.promptKind)
+			}
 			a.reqDesc = describe(cmd, args)
 			unlocker.PromptMessage = fmt.Sprintf("%s requests: %s\nUnlocking starts a session for %s.", parentName(), a.reqDesc, defaultTTL)
+			return nil
 		},
 	}
 	root.PersistentFlags().BoolVar(&a.noPrompt, "no-prompt", false, "fail when locked instead of prompting for the password")
+	root.PersistentFlags().StringVar(&a.promptKind, "prompt", "", "password prompt kind: gui (OS dialog) or tty (terminal); overrides LOCALVAULT_PROMPT")
 	root.SetIn(a.In)
 	root.SetOut(a.Out)
 	root.SetErr(a.Err)
